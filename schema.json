@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "wall-template output",
-  "description": "Placeholder tool: reports whether IPv4 addresses are private. Usage: wall-template IP [IP ...]. When building a real tool, replace this description and the params and result definitions; keep everything else (the envelope) identical to the other wall-* schemas.",
+  "title": "wall-wol output",
+  "description": "Sends Wake-on-LAN magic packets to wake devices. Usage: wall-wol MAC [MAC ...] [--broadcast IP] [--port 9] [--count 3] [--interval-ms 100]. Sending a packet does not prove the device woke up: Wake-on-LAN has no reply.",
   "type": "object",
   "required": ["schema_version", "tool", "started_at", "duration_ms", "status", "errors", "params", "result"],
   "properties": {
@@ -97,38 +97,64 @@
       "type": "string",
       "format": "ipv4"
     },
+    "mac": {
+      "description": "MAC address, lowercase and colon-separated.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{2}(:[0-9a-f]{2}){5}$"
+    },
     "params": {
-      "description": "The inputs of this run, echoed back so a stored result describes itself.",
+      "description": "The run-wide inputs. The MAC addresses are in result.targets.",
       "type": "object",
-      "required": ["addresses"],
+      "required": ["broadcast", "port", "count", "interval_ms"],
       "properties": {
-        "addresses": {
-          "description": "IPv4 addresses from the command line, in the order given.",
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/ipv4" }
+        "broadcast": {
+          "description": "Destination IPv4 address of the packets: 255.255.255.255 (the default) or a private address, normally the broadcast address of the device's network, e.g. 192.168.1.255.",
+          "$ref": "#/$defs/ipv4"
+        },
+        "port": {
+          "description": "Destination UDP port, normally 9.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "count": {
+          "description": "Magic packets sent to each MAC address.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "interval_ms": {
+          "description": "Pause between rounds of packets, in milliseconds.",
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
     "result": {
       "type": "object",
-      "required": ["addresses"],
+      "required": ["source_ip", "targets"],
       "properties": {
-        "addresses": {
-          "description": "One entry per distinct address, sorted numerically.",
+        "source_ip": {
+          "description": "The local IPv4 address the packets left from, chosen by the routing table for the destination. It shows which network they went out on: with several network cards, 255.255.255.255 leaves through the one with the default route, which may not be the device's network. null if the operating system does not say.",
+          "type": ["string", "null"],
+          "format": "ipv4"
+        },
+        "targets": {
+          "description": "One entry per MAC address, in the order given. A repeated address is listed, and sent packets, once.",
           "type": "array",
-          "items": { "$ref": "#/$defs/address" }
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/target" }
         }
       }
     },
-    "address": {
+    "target": {
       "type": "object",
-      "required": ["ip", "private"],
+      "required": ["mac", "packets_sent"],
       "properties": {
-        "ip": { "$ref": "#/$defs/ipv4" },
-        "private": {
-          "description": "true for addresses in private-use ranges such as 192.168.0.0/16.",
-          "type": "boolean"
+        "mac": { "$ref": "#/$defs/mac" },
+        "packets_sent": {
+          "description": "Magic packets handed to the network for this address: params.count, unless sending failed part-way (status is then partial). Wake-on-LAN has no reply, so this does not prove the device woke up.",
+          "type": "integer",
+          "minimum": 0
         }
       }
     }

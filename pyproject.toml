@@ -3,9 +3,9 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "wall-template"
+name = "wall-wol"
 dynamic = ["version"]
-description = "Template for wall-* command-line tools."
+description = "Wakes devices with Wake-on-LAN magic packets."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
@@ -19,10 +19,10 @@ dev = [
 ]
 
 [project.scripts]
-wall-template = "wall_template.cli:main"
+wall-wol = "wall_wol.cli:main"
 
 [tool.hatch.version]
-path = "src/wall_template/__init__.py"
+path = "src/wall_wol/__init__.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
